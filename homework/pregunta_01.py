@@ -71,3 +71,49 @@ def pregunta_01():
 
 
     """
+
+import os
+import zipfile
+
+import pandas as pd
+
+
+def pregunta_01():
+    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    zip_path = os.path.join(root_dir, "files", "input.zip")
+    input_dir = os.path.join(root_dir, "input")
+    output_dir = os.path.join(root_dir, "files", "output")
+
+    if not os.path.exists(input_dir):
+        os.makedirs(input_dir, exist_ok=True)
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(root_dir)
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    def build_dataset(split_name: str):
+        split_dir = os.path.join(input_dir, split_name)
+        rows = []
+
+        if not os.path.isdir(split_dir):
+            return pd.DataFrame(columns=["phrase", "target"])
+
+        for sentiment in sorted(os.listdir(split_dir)):
+            sentiment_dir = os.path.join(split_dir, sentiment)
+            if not os.path.isdir(sentiment_dir):
+                continue
+            for filename in sorted(os.listdir(sentiment_dir)):
+                if not filename.lower().endswith(".txt"):
+                    continue
+                file_path = os.path.join(sentiment_dir, filename)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    phrase = f.read().strip()
+                rows.append({"phrase": phrase, "target": sentiment})
+
+        return pd.DataFrame(rows, columns=["phrase", "target"])
+
+    train_df = build_dataset("train")
+    test_df = build_dataset("test")
+
+    train_df.to_csv(os.path.join(output_dir, "train_dataset.csv"), index=False)
+    test_df.to_csv(os.path.join(output_dir, "test_dataset.csv"), index=False)
